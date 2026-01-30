@@ -1,13 +1,17 @@
 import { Mail, Phone, MapPin, Clock } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    company: '',
+    subject: '',
     message: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -16,10 +20,40 @@ const Contact = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    setFormData({ name: '', email: '', company: '', message: '' });
+    setLoading(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    try {
+      if (!supabase) {
+        setErrorMessage('Database connection unavailable');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('contact_messages')
+        .insert({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message
+        });
+
+      if (error) {
+        setErrorMessage('Failed to send message. Please try again.');
+        console.error('Contact form error:', error);
+      } else {
+        setSuccessMessage('Message sent successfully! We will get back to you soon.');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      }
+    } catch (err) {
+      setErrorMessage('Failed to send message. Please try again.');
+      console.error('Contact form error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,14 +130,15 @@ const Contact = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Company</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Subject</label>
                 <input
                   type="text"
-                  name="company"
-                  value={formData.company}
+                  name="subject"
+                  value={formData.subject}
                   onChange={handleChange}
+                  required
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
-                  placeholder="Your company"
+                  placeholder="What is this about?"
                 />
               </div>
 
@@ -120,11 +155,24 @@ const Contact = () => {
                 ></textarea>
               </div>
 
+              {successMessage && (
+                <div className="p-4 bg-emerald-500/15 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm">
+                  {successMessage}
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="p-4 bg-red-500/15 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {errorMessage}
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full px-6 py-3 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg transition-all"
+                disabled={loading}
+                className="w-full px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all"
               >
-                Send Message
+                {loading ? 'Sending...' : 'Send Message'}
               </button>
             </form>
           </div>

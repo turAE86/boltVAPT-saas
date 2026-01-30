@@ -1,5 +1,5 @@
-import React, { createContext, useContext } from 'react';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   user: { id: string; email: string } | null;
@@ -10,21 +10,59 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    const getSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          });
+        }
+      } catch (error) {
+        console.error('Error getting session:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   const handleSignOut = async () => {
-    await signOut();
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setUser(null);
   };
 
   const contextValue: AuthContextType = {
-    user: user
-      ? {
-          id: user.id,
-          email: user.primaryEmailAddress?.emailAddress || '',
-        }
-      : null,
-    loading: !isLoaded,
+    user,
+    loading,
     signOut: handleSignOut,
   };
 
