@@ -2,7 +2,6 @@ import { Shield, Menu, X, LogOut, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { SignOutButton } from '@clerk/clerk-react';
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,10 +30,6 @@ const Navigation = () => {
     } catch (error) {
       console.error('Sign out failed:', error);
     }
-  };
-
-  const handleClerkSignOut = () => {
-    setIsProfileOpen(false);
   };
 
   return (
@@ -79,15 +74,13 @@ const Navigation = () => {
                     <p className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Account</p>
                     <p className="text-sm text-white mt-1 truncate">{user.email}</p>
                   </div>
-                  <SignOutButton redirectUrl="/" signOutOptions={{ sessionId: 'active' }}>
-                    <button
-                      onClick={handleClerkSignOut}
-                      className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2"
-                    >
-                      <LogOut size={16} />
-                      Sign Out
-                    </button>
-                  </SignOutButton>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:text-white hover:bg-slate-800/50 transition-all flex items-center gap-2"
+                  >
+                    <LogOut size={16} />
+                    Sign Out
+                  </button>
                 </div>
               )}
             </div>
